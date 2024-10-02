@@ -18,18 +18,18 @@ actor TestResultRepository {
     
     func fetchTestResults() async throws -> [TestResult] {
         let localTestResults: [TestResult] = try await fetchLocalTestResults()
-        await MainActor.run { delegate?.emitLocal(localTestResults) }
+        await delegate?.emitLocal(localTestResults)
         
         let remoteTestResults: [TestResult] = try await fetchRemoteTestResults()
         try await createOrUpdateTestResults(remoteTestResults)
         
         let upToDateLocalTestResults: [TestResult] = try await fetchLocalTestResults()
-        await MainActor.run { delegate?.emitLocal(upToDateLocalTestResults) }
+        await delegate?.emitLocal(upToDateLocalTestResults)
         
         return upToDateLocalTestResults
     }
     
-    func fetchLocalTestResults(predicate: NSPredicate? = nil, sortDescriptors: [NSSortDescriptor]? = nil) async throws -> [TestResult] {
+    nonisolated func fetchLocalTestResults(predicate: NSPredicate? = nil, sortDescriptors: [NSSortDescriptor]? = nil) async throws -> [TestResult] {
         let backgroundContext = DataController.shared.container.newBackgroundContext()
         let fetchRequest = TestResultEntity.fetchRequest()
         fetchRequest.predicate = predicate
@@ -77,6 +77,7 @@ actor TestResultRepository {
     }
     
     func createTestResult(_ testResult: TestResult) async throws {
+        let delegate = await self.delegate
         let backgroundContext = DataController.shared.container.newBackgroundContext()
         
         try await backgroundContext.perform {
@@ -86,18 +87,12 @@ actor TestResultRepository {
                 self.setEntity(entity, fromValuesOf: testResult)
                 
                 try backgroundContext.save()
-                
-                // Logic to be reviewed for the below:
-                // the createTestResult() method is called in a loop in createOrUpdateTestResults(),
-                // therefore fetching all local test results with fetchLocalTestResults() at each pass of
-                // the for-loop, like it is currently done below, is expensive
-                
-                // Potential solutions:
-                // 1. batch update, transforming this method into one that accepts an array instead of a single value.
-                // 2. deferring the emission in the createOrUpdateTestResults() method
-                await MainActor.run { delegate?.emitLocal(fetchLocalTestResults()) }
             } catch {
                 throw error
+            }
+            
+            Task { @MainActor [delegate] in
+                delegate?.emitLocal(try await self.fetchLocalTestResults())
             }
         }
     }
@@ -107,6 +102,7 @@ actor TestResultRepository {
             throw CoreDataError.noMatchingEntity
         }
         
+        let delegate = await self.delegate
         let backgroundContext = DataController.shared.container.newBackgroundContext()
         let fetchRequest = TestResultEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", testResultID as CVarArg)
@@ -121,18 +117,12 @@ actor TestResultRepository {
                 self.setEntity(entity, fromValuesOf: testResult)
                 
                 try backgroundContext.save()
-                
-                // Logic to be reviewed for the below:
-                // the updateTestResult() method is called in a loop in createOrUpdateTestResults(),
-                // therefore fetching all local test results with fetchLocalTestResults() at each pass of
-                // the for-loop, like it is currently done below, is expensive
-                
-                // Potential solutions:
-                // 1. batch update, transforming this method into one that accepts an array instead of a single value.
-                // 2. deferring the emission in the createOrUpdateTestResults() method
-                await MainActor.run { delegate?.emitLocal(fetchLocalTestResults()) }
             } catch {
                 throw error
+            }
+            
+            Task { @MainActor [delegate] in
+                delegate?.emitLocal(try await self.fetchLocalTestResults())
             }
         }
     }
@@ -142,6 +132,7 @@ actor TestResultRepository {
             throw CoreDataError.noMatchingEntity
         }
         
+        let delegate = await self.delegate
         let backgroundContext = DataController.shared.container.newBackgroundContext()
         let fetchRequest = TestResultEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", testResultID as CVarArg)
@@ -156,17 +147,17 @@ actor TestResultRepository {
                 backgroundContext.delete(entity)
                 
                 try backgroundContext.save()
-                
-                await MainActor.run {delegate?.emitLocal(fetchLocalTestResults()) }
             } catch {
                 throw error
             }
+            
+            Task { @MainActor [delegate] in
+                delegate?.emitLocal(try await self.fetchLocalTestResults())
+            }
         }
-        
-        return
     }
     
-    private func setEntity(_ entity: TestResultEntity, fromValuesOf domainModel: TestResult) {
+    nonisolated private func setEntity(_ entity: TestResultEntity, fromValuesOf domainModel: TestResult) {
         entity.id = domainModel.id
         entity.course = domainModel.course
         entity.testName = domainModel.testName

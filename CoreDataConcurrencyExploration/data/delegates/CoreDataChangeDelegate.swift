@@ -6,7 +6,7 @@
 //
 
 @MainActor
-protocol CoreDataChangeDelegate<DataType>: AnyObject {
+protocol CoreDataChangeDelegate<DataType>: AnyObject, Sendable {
     associatedtype DataType: DomainModel
     
     func emitLocal(_ data: [DataType])

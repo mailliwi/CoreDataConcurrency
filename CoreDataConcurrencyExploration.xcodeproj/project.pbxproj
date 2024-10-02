@@ -10,22 +10,9 @@
 		3D57ED142CAC4DA50007573C /* CoreDataConcurrencyExploration.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CoreDataConcurrencyExploration.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3D57ED5D2CAC57870007573C /* Exceptions for "CoreDataConcurrencyExploration" folder in "CoreDataConcurrencyExploration" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				database/MyDatabase.xcdatamodeld,
-			);
-			target = 3D57ED132CAC4DA50007573C /* CoreDataConcurrencyExploration */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3D57ED162CAC4DA50007573C /* CoreDataConcurrencyExploration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				3D57ED5D2CAC57870007573C /* Exceptions for "CoreDataConcurrencyExploration" folder in "CoreDataConcurrencyExploration" target */,
-			);
 			path = CoreDataConcurrencyExploration;
 			sourceTree = "<group>";
 		};
