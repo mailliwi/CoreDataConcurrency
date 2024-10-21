@@ -180,7 +180,8 @@ final class MOCExecutor: SerialExecutor {
     }
 }
 
-@globalActor actor MOCActor: Actor {
+@globalActor
+actor MOCActor: Actor {
     nonisolated private let executor: MOCExecutor
     nonisolated var unownedExecutor: UnownedSerialExecutor { self.executor.asUnownedSerialExecutor() } // Ask why this is needed
     var moc: NSManagedObjectContext { self.executor.moc } // Ask why this is needed
@@ -192,6 +193,6 @@ final class MOCExecutor: SerialExecutor {
     
     private init(moc: NSManagedObjectContext) {
         self.executor = MOCExecutor(moc: moc)
+        moc.persistentStoreCoordinator = DataController.shared.container.persistentStoreCoordinator
     }
-    
 }
