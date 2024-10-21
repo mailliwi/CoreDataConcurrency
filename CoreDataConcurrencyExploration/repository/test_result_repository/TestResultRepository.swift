@@ -48,11 +48,11 @@ actor TestResultRepository {
         return remoteTestResults
     }
     
-    @MOCActor
+    @ManagedObjectContextActor
     func createOrUpdateTestResults(_ testResults: [TestResult]) throws {
         // 1. Get IDs
         let testResultIDs = testResults.compactMap { $0.id }
-        let backgroundContext = MOCActor.sharedMOC
+        let backgroundContext = ManagedObjectContextActor.sharedMOC
         let fetchRequest = TestResultEntity.fetchRequest()
         
         // 2.Get entities from local that match the IDs
@@ -75,9 +75,9 @@ actor TestResultRepository {
         }
     }
     
-    @MOCActor
+    @ManagedObjectContextActor
     func createTestResult(_ testResult: TestResult) throws {
-        let backgroundContext = MOCActor.sharedMOC
+        let backgroundContext = ManagedObjectContextActor.sharedMOC
         
         do {
             let entity: TestResultEntity = TestResultEntity(context: backgroundContext)
@@ -93,13 +93,13 @@ actor TestResultRepository {
         }
     }
     
-    @MOCActor
+    @ManagedObjectContextActor
     func updateTestResult(_ testResult: TestResult) throws {
         guard let testResultID = testResult.id else {
             throw CoreDataError.noMatchingEntity
         }
         
-        let backgroundContext = MOCActor.sharedMOC
+        let backgroundContext = ManagedObjectContextActor.sharedMOC
         let fetchRequest = TestResultEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", testResultID as CVarArg)
         
@@ -121,13 +121,13 @@ actor TestResultRepository {
         }
     }
     
-    @MOCActor
+    @ManagedObjectContextActor
     func deleteTestResult(_ testResult: TestResult) throws {
         guard let testResultID = testResult.id else {
             throw CoreDataError.noMatchingEntity
         }
         
-        let backgroundContext = MOCActor.sharedMOC
+        let backgroundContext = ManagedObjectContextActor.sharedMOC
         let fetchRequest = TestResultEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", testResultID as CVarArg)
         
@@ -149,7 +149,7 @@ actor TestResultRepository {
         }
     }
     
-    @MOCActor
+    @ManagedObjectContextActor
     private func setEntity(_ entity: TestResultEntity, fromValuesOf domainModel: TestResult) {
         entity.id = domainModel.id
         entity.course = domainModel.course
@@ -160,7 +160,7 @@ actor TestResultRepository {
     
 }
 
-final class MOCExecutor: SerialExecutor {
+final class ManagedObjectContextExecutor: SerialExecutor {
     nonisolated(unsafe) let moc: NSManagedObjectContext
     
     init(moc: NSManagedObjectContext) {
@@ -175,24 +175,26 @@ final class MOCExecutor: SerialExecutor {
         }
     }
     
-    func isSameExclusiveExecutionContext(other: MOCExecutor) -> Bool {
+    func isSameExclusiveExecutionContext(other: ManagedObjectContextExecutor) -> Bool {
         self.moc == other.moc
     }
 }
 
 @globalActor
-actor MOCActor: Actor {
-    nonisolated private let executor: MOCExecutor
+actor ManagedObjectContextActor: Actor {
+    nonisolated private let executor: ManagedObjectContextExecutor
     nonisolated var unownedExecutor: UnownedSerialExecutor { self.executor.asUnownedSerialExecutor() } // Ask why this is needed
     var moc: NSManagedObjectContext { self.executor.moc } // Ask why this is needed
     
-    static var shared: MOCActor = MOCActor(moc: NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType))
+    static var shared: ManagedObjectContextActor = ManagedObjectContextActor(
+        moc: NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+    )
     
-    @MOCActor
+    @ManagedObjectContextActor
     static var sharedMOC: NSManagedObjectContext { self.shared.executor.moc }
     
     private init(moc: NSManagedObjectContext) {
-        self.executor = MOCExecutor(moc: moc)
+        self.executor = ManagedObjectContextExecutor(moc: moc)
         moc.persistentStoreCoordinator = DataController.shared.container.persistentStoreCoordinator
     }
 }
