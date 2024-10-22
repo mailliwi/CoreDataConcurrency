@@ -7,7 +7,7 @@
 
 import CoreData
 
-actor TestResultRepository {
+public actor TestResultRepository {
     private let networkService: TestResultsNetworkService
     
     @MainActor weak var delegate: (any CoreDataChangeDelegate<TestResult>)?
@@ -29,27 +29,30 @@ actor TestResultRepository {
         return upToDateLocalTestResults
     }
     
-    nonisolated func fetchLocalTestResults(predicate: NSPredicate? = nil, sortDescriptors: [NSSortDescriptor]? = nil) async throws -> [TestResult] {
-        let backgroundContext = DataController.shared.container.newBackgroundContext()
+    @ManagedObjectContextActor
+    private func fetchLocalTestResults(predicate: NSPredicate? = nil, sortDescriptors: [NSSortDescriptor]? = nil) async throws -> [TestResult] {
+        let backgroundContext = ManagedObjectContextActor.sharedMOC
         let fetchRequest = TestResultEntity.fetchRequest()
         fetchRequest.predicate = predicate
         fetchRequest.sortDescriptors = sortDescriptors
         
-        return try await backgroundContext.perform {
+        do {
             let entities = try backgroundContext.fetch(fetchRequest)
             let testResults: [TestResult] = entities.map { TestResult(from: $0) }
             
             return testResults
+        } catch {
+            throw error
         }
     }
     
-    func fetchRemoteTestResults() async throws -> [TestResult] {
+    private func fetchRemoteTestResults() async throws -> [TestResult] {
         let remoteTestResults: [TestResult] = try await networkService.getTestResults()
         return remoteTestResults
     }
     
     @ManagedObjectContextActor
-    func createOrUpdateTestResults(_ testResults: [TestResult]) throws {
+    private func createOrUpdateTestResults(_ testResults: [TestResult]) throws {
         // 1. Get IDs
         let testResultIDs = testResults.compactMap { $0.id }
         let backgroundContext = ManagedObjectContextActor.sharedMOC

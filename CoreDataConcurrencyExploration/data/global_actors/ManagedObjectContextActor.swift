@@ -10,8 +10,8 @@ import CoreData
 @globalActor
 actor ManagedObjectContextActor: Actor {
     nonisolated private let executor: ManagedObjectContextExecutor
-    nonisolated var unownedExecutor: UnownedSerialExecutor { self.executor.asUnownedSerialExecutor() } // Ask why this is needed
-    var moc: NSManagedObjectContext { self.executor.moc } // Ask why this is needed
+    nonisolated var unownedExecutor: UnownedSerialExecutor { self.executor.asUnownedSerialExecutor() }
+    var moc: NSManagedObjectContext { self.executor.moc }
     
     static var shared: ManagedObjectContextActor = ManagedObjectContextActor(
         moc: NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
